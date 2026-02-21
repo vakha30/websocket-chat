@@ -243,6 +243,7 @@ body {
   display: flex;
   gap: 10px;
   flex-shrink: 0;
+  align-items: center;
 }
 
 .message-form input {
@@ -257,6 +258,64 @@ body {
 
 .message-form input:focus {
   border-color: #667eea;
+}
+
+.emoji-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #f0f0f0;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emoji-btn:hover {
+  background: #e0e0e0;
+  transform: scale(1.1);
+}
+
+.emoji-btn.active {
+  background: #667eea;
+}
+
+/* Панель смайликов */
+.emoji-panel {
+  display: none;
+  padding: 10px 15px;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.emoji-panel.show {
+  display: flex;
+}
+
+.emoji-panel .emoji {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emoji-panel .emoji:hover {
+  background: #667eea;
+  transform: scale(1.2);
 }
 
 .message-form button {
@@ -357,6 +416,23 @@ body {
   
   .login-box h2 {
     font-size: 20px;
+  }
+  
+  .emoji-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+  
+  .emoji-panel {
+    max-height: 120px;
+    padding: 8px 10px;
+  }
+  
+  .emoji-panel .emoji {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
   }
 }
 

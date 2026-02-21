@@ -14,6 +14,8 @@ const sendBtn = document.getElementById('send-btn');
 const messagesContainer = document.getElementById('messages');
 const usersList = document.getElementById('users-list');
 const usersCount = document.getElementById('users-count');
+const emojiBtn = document.getElementById('emoji-btn');
+const emojiPanel = document.getElementById('emoji-panel');
 
 // Подключение к WebSocket серверу
 function connect() {
@@ -160,6 +162,34 @@ messageForm.addEventListener('submit', (e) => {
   messageInput.value = '';
   messageInput.focus();
 });
+
+// Обработчик кнопки смайликов
+if (emojiBtn) {
+  emojiBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    emojiPanel.classList.toggle('show');
+    emojiBtn.classList.toggle('active');
+  });
+
+  // Обработчик выбора смайлика
+  emojiPanel.querySelectorAll('.emoji').forEach(emoji => {
+    emoji.addEventListener('click', () => {
+      const emojiChar = emoji.dataset.emoji;
+      messageInput.value += emojiChar;
+      messageInput.focus();
+      emojiPanel.classList.remove('show');
+      emojiBtn.classList.remove('active');
+    });
+  });
+
+  // Закрыть панель при клике вне её
+  document.addEventListener('click', (e) => {
+    if (!emojiPanel.contains(e.target) && e.target !== emojiBtn) {
+      emojiPanel.classList.remove('show');
+      emojiBtn.classList.remove('active');
+    }
+  });
+}
 
 // Фокус на поле ввода при загрузке
 usernameInput.focus();
