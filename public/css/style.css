@@ -310,7 +310,7 @@ body {
   }
   
   .container {
-    height: 100dvh;
+    height: 80dvh;
     max-width: 100%;
     border-radius: 0;
   }
