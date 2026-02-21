@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSocket Чат</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 900px;
+      height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Экран входа */
+    #login-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .login-box {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .login-box h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      margin-bottom: 15px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .login-box input:focus {
+      border-color: #667eea;
+    }
+
+    .login-box button {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .login-box button:hover {
+      transform: scale(1.02);
+    }
+
+    /* Основной чат */
+    #chat-screen {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-header h1 {
+      font-size: 24px;
+    }
+
+    .users-count {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .chat-content {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Список пользователей */
+    .users-sidebar {
+      width: 200px;
+      background: #f5f5f5;
+      border-right: 1px solid #e0e0e0;
+      padding: 15px;
+      overflow-y: auto;
+    }
+
+    .users-sidebar h3 {
+      color: #333;
+      font-size: 14px;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .users-list {
+      list-style: none;
+    }
+
+    .users-list li {
+      padding: 10px;
+      margin-bottom: 5px;
+      background: white;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .users-list li::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: #4caf50;
+      border-radius: 50%;
+    }
+
+    /* Сообщения */
+    .messages-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #fafafa;
+    }
+
+    .message {
+      margin-bottom: 15px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      max-width: 70%;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.own {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      margin-left: auto;
+      border-bottom-right-radius: 2px;
+    }
+
+    .message.other {
+      background: white;
+      color: #333;
+      border: 1px solid #e0e0e0;
+      border-bottom-left-radius: 2px;
+    }
+
+    .message.system {
+      background: #e8e8e8;
+      color: #666;
+      text-align: center;
+      max-width: 100%;
+      font-size: 13px;
+    }
+
+    .message .username {
+      font-weight: bold;
+      font-size: 12px;
+      margin-bottom: 5px;
+      opacity: 0.8;
+    }
+
+    .message.own .username {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .message .time {
+      font-size: 11px;
+      opacity: 0.6;
+      margin-left: 10px;
+    }
+
+    /* Форма отправки */
+    .message-form {
+      padding: 20px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 10px;
+    }
+
+    .message-form input {
+      flex: 1;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .message-form input:focus {
+      border-color: #667eea;
+    }
+
+    .message-form button {
+      padding: 15px 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .message-form button:hover {
+      transform: scale(1.02);
+    }
+
+    .message-form button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Скроллбар */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a1a1a1;
+    }
+
+    /* Адаптивность */
+    @media (max-width: 600px) {
+      .users-sidebar {
+        display: none;
+      }
+      
+      .container {
+        height: 100vh;
+        max-width: 100%;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Экран входа -->
+  <div id="login-screen">
+    <div class="login-box">
+      <h2>Добро пожаловать в чат!</h2>
+      <input type="text" id="username" placeholder="Введите ваше имя" maxlength="20">
+      <button id="join-btn">Войти в чат</button>
+    </div>
+  </div>
+
+  <!-- Основной интерфейс чата -->
+  <div class="container">
+    <div id="chat-screen">
+      <div class="chat-header">
+        <h1>💬 Общий чат</h1>
+        <div class="users-count">Пользователей: <span id="users-count">0</span></div>
+      </div>
+      
+      <div class="chat-content">
+        <div class="users-sidebar">
+          <h3>Участники</h3>
+          <ul class="users-list" id="users-list"></ul>
+        </div>
+        
+        <div class="messages-container">
+          <div class="messages" id="messages"></div>
+          
+          <form class="message-form" id="message-form">
+            <input type="text" id="message-input" placeholder="Введите сообщение..." autocomplete="off">
+            <button type="submit" id="send-btn">Отправить</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Состояние приложения
+    let ws = null;
+    let username = '';
+    let isConnected = false;
+
+    // DOM элементы
+    const loginScreen = document.getElementById('login-screen');
+    const chatScreen = document.getElementById('chat-screen');
+    const usernameInput = document.getElementById('username');
+    const joinBtn = document.getElementById('join-btn');
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const messagesContainer = document.getElementById('messages');
+    const usersList = document.getElementById('users-list');
+    const usersCount = document.getElementById('users-count');
+
+    // Подключение к WebSocket серверу
+    function connect() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+      ws.onopen = () => {
+        console.log('Подключено к серверу');
+        isConnected = true;
+        
+        // Отправляем имя пользователя
+        ws.send(JSON.stringify({
+          type: 'join',
+          username: username
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          handleMessage(message);
+        } catch (error) {
+          console.error('Ошибка парсинга сообщения:', error);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('Отключено от сервера');
+        isConnected = false;
+        addSystemMessage('Соединение с сервером потеряно. Переподключение...');
+        
+        // Переподключение через 3 секунды
+        setTimeout(() => {
+          if (!isConnected) {
+            connect();
+          }
+        }, 3000);
+      };
+
+      ws.onerror = (error) => {
+        console.error('Ошибка WebSocket:', error);
+      };
+    }
+
+    // Обработка входящих сообщений
+    function handleMessage(message) {
+      switch (message.type) {
+        case 'message':
+          addMessage(message.username, message.content, message.username === username);
+          break;
+        case 'join':
+          addSystemMessage(message.content);
+          break;
+        case 'leave':
+          addSystemMessage(message.content);
+          break;
+        case 'users':
+          updateUsersList(message.users);
+          break;
+      }
+    }
+
+    // Добавление сообщения в чат
+    function addMessage(user, content, isOwn) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${isOwn ? 'own' : 'other'}`;
+      
+      const time = new Date().toLocaleTimeString('ru-RU', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      messageDiv.innerHTML = `
+        <div class="username">${escapeHtml(user)}</div>
+        <div>${escapeHtml(content)}</div>
+        <span class="time">${time}</span>
+      `;
+      
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Добавление системного сообщения
+    function addSystemMessage(content) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message system';
+      messageDiv.textContent = content;
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Обновление списка пользователей
+    function updateUsersList(users) {
+      usersList.innerHTML = '';
+      usersCount.textContent = users.length;
+      
+      users.forEach(user => {
+        const li = document.createElement('li');
+        li.textContent = user;
+        usersList.appendChild(li);
+      });
+    }
+
+    // Экранирование HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Обработчик кнопки входа
+    joinBtn.addEventListener('click', () => {
+      const name = usernameInput.value.trim();
+      if (name.length < 2) {
+        alert('Имя должно содержать минимум 2 символа');
+        return;
+      }
+      
+      username = name;
+      loginScreen.style.display = 'none';
+      chatScreen.style.display = 'flex';
+      connect();
+    });
+
+    // Обработчик ввода имени (Enter)
+    usernameInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        joinBtn.click();
+      }
+    });
+
+    // Обработчик отправки формы
+    messageForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const content = messageInput.value.trim();
+      if (!content || !isConnected) return;
+      
+      ws.send(JSON.stringify({
+        type: 'message',
+        content: content
+      }));
+      
+      messageInput.value = '';
+      messageInput.focus();
+    });
+
+    // Фокус на поле ввода при загрузке
+    usernameInput.focus();
+  </script>
+</body>
+</html>
