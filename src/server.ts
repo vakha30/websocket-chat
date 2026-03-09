@@ -18,7 +18,7 @@ interface Client {
 }
 
 interface Message {
-  type: 'message' | 'join' | 'leave' | 'users' | 'image';
+  type: 'message' | 'join' | 'leave' | 'users' | 'image' | 'typing';
   username?: string;
   content?: string;
   imageUrl?: string;
@@ -205,6 +205,17 @@ wss.on('connection', (ws: WebSocket) => {
               username: imageClient.username,
               imageUrl: message.imageUrl,
             });
+          }
+          break;
+
+        case 'typing':
+          // Пересылка события печати всем кроме отправителя
+          const typingClient = clients.get(ws);
+          if (typingClient) {
+            broadcast({
+              type: 'typing',
+              username: typingClient.username,
+            }, ws);
           }
           break;
       }

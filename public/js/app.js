@@ -17,6 +17,7 @@ const usersCount = document.getElementById('users-count');
 const emojiBtn = document.getElementById('emoji-btn');
 const emojiPanel = document.getElementById('emoji-panel');
 const imageInput = document.getElementById('image-input');
+const typingIndicator = document.getElementById('typing-indicator');
 
 // Подключение к WebSocket серверу
 function connect() {
@@ -66,9 +67,14 @@ function handleMessage(message) {
   switch (message.type) {
     case 'message':
       addMessage(message.username, message.content, message.username === username);
+      hideTypingIndicator();
       break;
     case 'image':
       addImage(message.username, message.imageUrl, message.username === username);
+      hideTypingIndicator();
+      break;
+    case 'typing':
+      showTypingIndicator(message.username);
       break;
     case 'join':
       addSystemMessage(message.content);
@@ -143,6 +149,25 @@ function updateUsersList(users) {
   });
 }
 
+// Показать индикатор печати
+function showTypingIndicator(typingUser) {
+  if (typingUser === username) return;
+  typingIndicator.textContent = `${typingUser} печатает...`;
+  typingIndicator.style.display = 'block';
+  
+  // Скрыть через 3 секунды
+  clearTimeout(window.typingTimeout);
+  window.typingTimeout = setTimeout(() => {
+    hideTypingIndicator();
+  }, 3000);
+}
+
+// Скрыть индикатор печати
+function hideTypingIndicator() {
+  typingIndicator.style.display = 'none';
+  clearTimeout(window.typingTimeout);
+}
+
 // Экранирование HTML
 function escapeHtml(text) {
   const div = document.createElement('div');
@@ -185,6 +210,16 @@ messageForm.addEventListener('submit', (e) => {
   
   messageInput.value = '';
   messageInput.focus();
+});
+
+// Обработчик ввода текста - отправка события typing
+let typingTimeout = null;
+messageInput.addEventListener('input', () => {
+  if (!isConnected) return;
+  
+  ws.send(JSON.stringify({
+    type: 'typing'
+  }));
 });
 
 // Обработчик кнопки смайликов

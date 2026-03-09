@@ -317,6 +317,21 @@ body {
   transform: scale(1.02);
 }
 
+/* Индикатор печати */
+.typing-indicator {
+  padding: 8px 15px;
+  color: #888;
+  font-size: 13px;
+  font-style: italic;
+  display: none;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Панель смайликов */
 .emoji-panel {
   display: none;

@@ -206,6 +206,16 @@ wss.on('connection', (ws) => {
                         });
                     }
                     break;
+                case 'typing':
+                    // Пересылка события печати всем кроме отправителя
+                    const typingClient = clients.get(ws);
+                    if (typingClient) {
+                        broadcast({
+                            type: 'typing',
+                            username: typingClient.username,
+                        }, ws);
+                    }
+                    break;
             }
         }
         catch (error) {
