@@ -2,6 +2,15 @@ import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import { WebSocketServer, WebSocket } from 'ws';
+import * as crypto from 'crypto';
+
+// Директория для хранения загруженных изображений
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+
+// Создаем директорию для загрузок, если её нет
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 
 interface Client {
   ws: WebSocket;
@@ -9,9 +18,10 @@ interface Client {
 }
 
 interface Message {
-  type: 'message' | 'join' | 'leave' | 'users';
+  type: 'message' | 'join' | 'leave' | 'users' | 'image';
   username?: string;
   content?: string;
+  imageUrl?: string;
   users?: string[];
 }
 
@@ -29,7 +39,76 @@ const server = http.createServer((req, res) => {
     '.js': 'application/javascript',
     '.css': 'text/css',
     '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
   };
+
+  // Обработка загрузки изображений
+  if (req.url?.startsWith('/uploads/') && req.method === 'GET') {
+    const imagePath = path.join(UPLOADS_DIR, path.basename(req.url));
+    fs.readFile(imagePath, (err, content) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('Image not found');
+      } else {
+        const ext = path.extname(imagePath);
+        res.writeHead(200, { 'Content-Type': contentTypes[ext] || 'image/png' });
+        res.end(content);
+      }
+    });
+    return;
+  }
+
+  // Обработка POST запроса для загрузки изображений
+  if (req.url === '/upload' && req.method === 'POST') {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => {
+      const body = Buffer.concat(chunks);
+      
+      // Парсим multipart данные
+      const boundary = req.headers['content-type']?.split('boundary=')[1];
+      if (!boundary) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'No boundary' }));
+        return;
+      }
+
+      const boundaryBuffer = '--' + boundary;
+      const parts = body.toString('binary').split(boundaryBuffer);
+      
+      for (const part of parts) {
+        if (part.includes('filename=') && part.includes('image/')) {
+          // Извлекаем данные изображения
+          const headerEnd = part.indexOf('\r\n\r\n');
+          if (headerEnd !== -1) {
+            const imageData = part.substring(headerEnd + 4, part.length - 2);
+            const buffer = Buffer.from(imageData, 'binary');
+            
+            // Генерируем уникальное имя файла
+            const ext = part.includes('png') ? '.png' : 
+                        part.includes('jpg') || part.includes('jpeg') ? '.jpg' : 
+                        part.includes('gif') ? '.gif' : '.png';
+            const filename = `${crypto.randomUUID()}${ext}`;
+            const filepath = path.join(UPLOADS_DIR, filename);
+            
+            fs.writeFileSync(filepath, buffer);
+            
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ url: `/uploads/${filename}` }));
+            return;
+          }
+        }
+      }
+      
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'No image found' }));
+    });
+    return;
+  }
 
   const contentType = contentTypes[extname] || 'text/plain';
 
@@ -113,6 +192,18 @@ wss.on('connection', (ws: WebSocket) => {
               type: 'message',
               username: client.username,
               content: message.content,
+            });
+          }
+          break;
+
+        case 'image':
+          // Пересылка изображения всем
+          const imageClient = clients.get(ws);
+          if (imageClient && message.imageUrl) {
+            broadcast({
+              type: 'image',
+              username: imageClient.username,
+              imageUrl: message.imageUrl,
             });
           }
           break;

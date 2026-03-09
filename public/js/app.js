@@ -16,6 +16,7 @@ const usersList = document.getElementById('users-list');
 const usersCount = document.getElementById('users-count');
 const emojiBtn = document.getElementById('emoji-btn');
 const emojiPanel = document.getElementById('emoji-panel');
+const imageInput = document.getElementById('image-input');
 
 // Подключение к WebSocket серверу
 function connect() {
@@ -66,6 +67,9 @@ function handleMessage(message) {
     case 'message':
       addMessage(message.username, message.content, message.username === username);
       break;
+    case 'image':
+      addImage(message.username, message.imageUrl, message.username === username);
+      break;
     case 'join':
       addSystemMessage(message.content);
       break;
@@ -91,6 +95,26 @@ function addMessage(user, content, isOwn) {
   messageDiv.innerHTML = `
     <div class="username">${escapeHtml(user)}</div>
     <div>${escapeHtml(content)}</div>
+    <span class="time">${time}</span>
+  `;
+  
+  messagesContainer.appendChild(messageDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Добавление изображения в чат
+function addImage(user, imageUrl, isOwn) {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${isOwn ? 'own' : 'other'}`;
+  
+  const time = new Date().toLocaleTimeString('ru-RU', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+  
+  messageDiv.innerHTML = `
+    <div class="username">${escapeHtml(user)}</div>
+    <img src="${imageUrl}" alt="Изображение" class="message-image" loading="lazy">
     <span class="time">${time}</span>
   `;
   
@@ -193,3 +217,44 @@ if (emojiBtn) {
 
 // Фокус на поле ввода при загрузке
 usernameInput.focus();
+
+// Обработчик загрузки изображений
+imageInput.addEventListener('change', async () => {
+  const file = imageInput.files?.[0];
+  if (!file || !isConnected) return;
+  
+  // Проверяем, что файл является изображением
+  if (!file.type.startsWith('image/')) {
+    alert('Пожалуйста, выберите изображение');
+    return;
+  }
+  
+  // Создаем FormData и отправляем на сервер
+  const formData = new FormData();
+  formData.append('image', file);
+  
+  try {
+    const response = await fetch('/upload', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const data = await response.json();
+    
+    if (data.url) {
+      // Отправляем URL изображения через WebSocket
+      ws.send(JSON.stringify({
+        type: 'image',
+        imageUrl: data.url
+      }));
+    } else {
+      alert('Ошибка при загрузке изображения');
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки:', error);
+    alert('Не удалось загрузить изображение');
+  }
+  
+  // Очищаем input
+  imageInput.value = '';
+});

@@ -283,6 +283,40 @@ body {
   background: #667eea;
 }
 
+/* Кнопка загрузки изображения */
+.image-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #f0f0f0;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-btn:hover {
+  background: #e0e0e0;
+  transform: scale(1.1);
+}
+
+/* Изображение в сообщении */
+.message-image {
+  max-width: 250px;
+  max-height: 200px;
+  border-radius: 8px;
+  margin: 8px 0;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.message-image:hover {
+  transform: scale(1.02);
+}
+
 /* Панель смайликов */
 .emoji-panel {
   display: none;
